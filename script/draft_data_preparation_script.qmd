@@ -1,5 +1,6 @@
 ---
-title: "final_as_quarto"
+title: "EDLD 651 Draft Data Preparation Script"
+author: "Febe Lin, Ramtin Ranjpour, & James Phillips"
 format: html
 editor: visual
 ---
@@ -16,5 +17,10 @@ library(skimr)
 
 ```{r}
 student_social <- import(here("data", "final_students_social_media.csv"))
+```
+
+```{r}
+student_social |> 
+  mean_age = mean(Age)
 ```
 
