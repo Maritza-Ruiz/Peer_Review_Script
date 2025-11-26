@@ -154,8 +154,6 @@ ggplot(summary_data,
   ) +
   theme_minimal()
 
-
-
 ```
 
 It does show a negative effect of daily screen time on mental health, but there is no clear "tipping point." Instead, the decline appears more stepwise, with mental health decreasing gradually across each usage group.
@@ -283,8 +281,7 @@ mh_chi <- chisq.test(mh_chi)
 mh_chi
 ```
 
-These results indicated a significant association between primary platform use and reported mental health status (χ² = 226.05, *df* = 11, *p* < .001),
-suggesting that low versus not-low mental health frequencies vary across platforms to a noteworthy degree.
+These results indicated a significant association between primary platform use and reported mental health status (χ² = 226.05, *df* = 11, *p* \< .001), suggesting that low versus not-low mental health frequencies vary across platforms to a noteworthy degree.
 
 *RQ*~5~: Do any specific platforms correlate to higher levels of social media addiction?
 
@@ -311,3 +308,114 @@ platform_addiction |>
 ```
 
 The resulting data indicated that those who reported using WhatsApp or Snapchat the most also reported the highest level of addiction to social media (*M~WA~* = 7.46, *SD* = 0.50; *M~S~* = 7.46, *SD* = 0.78), closely followed by those who reported TikTok as their most used platform (*M* = 7.43, *SD* = 1.04). Those who reported using LINE as their most used platform reported the lowest level of addiction to social media (*M* = 3.00, *SD* = 0.00).
+
+## RQ6
+
+*RQ*~6~: Among college students, comparing students from the US to those from the Middle East and the Far East, how does mental health affect conflicts over social media?
+
+For this question, we are filtering the responses into three groups by country: the USA, the Middle Easterns, and the Far Easterns. We are also exclusively looking at college students, both undergrad and grad, thereby removing high schoolers.
+
+```{r}
+sm <- import(here("data", "tidy_data.csv")) |>
+  clean_names()
+  
+middle_east <- c("Bahrain", "Iraq", "Israel", "Jordan", "Kuwait",
+                 "Lebanon", "Oman", "Qatar", "Syria", "Turkey",
+                 "UAE", "Yemen")
+
+far_east <- c("China", "Japan", "South Korea", "Taiwan", "Singapore",
+              "Malaysia", "Indonesia", "Vietnam", "Philippines",
+              "Thailand", "Hong Kong")
+
+# Use the right column and classifications to filter for college students.
+# Create a new column for our three regions.
+students <- sm |>
+  filter(academic_level %in% c("Undergraduate", "Graduate")) |>
+  mutate(
+    region = case_when(
+      country == "USA" ~ "USA",
+      country %in% middle_east ~ "Middle East",
+      country %in% far_east ~ "Far East",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(region)) |> # Select the columns to use.
+  select(student_id,
+         region,
+         academic_level,
+         age,
+         gender,
+         mental_health_score,
+         conflicts_over_social_media)
+
+skim(students) # For a quick check.
+```
+
+Now we can run inferential tests with mental health as the IV, region as the grouping, and conflicts over social media as the DV.
+
+```{r}
+# Center mental health.
+students <- students |>
+  mutate(mh_c = scale(mental_health_score, center = TRUE, scale = FALSE))
+
+# Interaction model for differences by region.
+model_int <- lm(conflicts_over_social_media ~ mh_c * region, data = students)
+summary(model_int)
+
+anova(model_int)
+
+# Correlation by region.
+cor_by_region <- students |>
+  group_by(region) |>
+  summarise(
+    n = n(),
+    r_mh_conflict = cor(mental_health_score,
+                        conflicts_over_social_media,
+                        use = "pairwise.complete.obs")
+  )
+
+kable(cor_by_region, digits = 3,
+      caption = "Correlation Between Mental Health and Social Media Conflicts by Region")
+
+# Few basic descriptive statistics.
+desc_table <- students |>
+  group_by(region) |>
+  summarise(
+    n = n(),
+    mean_mh = mean(mental_health_score, na.rm = TRUE),
+    sd_mh   = sd(mental_health_score, na.rm = TRUE),
+    mean_conflict = mean(conflicts_over_social_media, na.rm = TRUE),
+    sd_conflict   = sd(conflicts_over_social_media, na.rm = TRUE)
+  )
+```
+
+With a multiple regression model that included centered mental health scores, three regions, and their interaction, the descriptive statistics show that students from the Far East reported the highest mental health scores (M = 6.77, SD = 0.91) and the lowest social media conflict levels (M = 2.30, SD = 0.86), followed by students from the Middle East next (M = 5.71, SD = 0.75; M = 3.27, SD = 0.81, respectively) and the United States last (M = 4.90, SD = 0.71; M = 3.80, SD = 0.41). Mental health was strongly and negatively associated with social media conflict across the board, and the relationship varied by the region, with the strongest correlations observed in the Middle East (r = −.98), followed by the Far East (r = −.90) and the United States (r = −.79). It was also revealed that the strength of this association was significantly different across regions, which suggest that poorer mental health predicts higher levels of confict over social media more strongly in the Middle East and the Far East in comparison to students in the US.
+
+```{r}
+ggplot(students,
+       aes(x = mental_health_score,
+           y = conflicts_over_social_media,
+           color = region)) +
+  geom_jitter(width = 0.1, height = 0.1, alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, size = 1.1) +
+  labs(
+    title = "Mental Health and Conflicts Over Social Media by Region",
+    x = "Mental Health Score",
+    y = "Conflicts Over Social Media",
+    color = "Region"
+  ) +
+  theme_minimal()
+
+students |>
+  group_by(region) |>
+  summarise(mean_conflict = mean(conflicts_over_social_media, na.rm = TRUE)) %>%
+  ggplot(aes(x = region, y = mean_conflict, fill = region)) +
+  geom_col() +
+  labs(
+    title = "Average Social Media Conflicts by Region for College Students",
+    x = "Region",
+    y = "Mean Conflict Score"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
