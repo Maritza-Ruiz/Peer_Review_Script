@@ -60,6 +60,12 @@ export(tidy_data, here("data", "tidy_data.csv"))
 
 *H*~1~: Screen time negatively predicts sleep time, which in turn negatively impacts mental health.
 
+#Maritza comment: Great RQ question and hypothesis. One small suggestion would be to rewrite with slightly more clarity. See suggestion below:
+
+RQ1: Does sleep deprivation mediate the relationship between daily screen time and mental health outcomes?
+
+H1: Greater screen time is associated with reduced sleep duration, which subsequently predicts poorer mental health.
+
 ```{r}
 # test mental ~ screen time
 model_test <-lm(Mental_Health_Score~Avg_Daily_Usage_Hours,data = tidy_data)
@@ -77,11 +83,15 @@ summary(model_full)
 #plot
 ggplot(tidy_data,
        aes(x= Avg_Daily_Usage_Hours, y= Mental_Health_Score))+
-  geom_smooth(model= "lm", se= TRUE)+
-  labs(title = "Relationship between Screen Time and Mental Health")+
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(title = "Relationship between Screen Time and Mental Health",
+    x = "Average Daily Usage (Hours)",
+    y = "Mental Health Score") +
   theme_minimal()+
-  theme(plot.title = element_text(size =10))
+  theme(plot.title = element_text(size =11, hjust = 0.5, face = "bold"))
 
+#Maritza suggestion: added axis labels
+#adjusted labels to make main title bold
 
 ggplot(tidy_data,
        aes(x= Avg_Daily_Usage_Hours, y= Sleep_Hours_Per_Night))+
@@ -90,13 +100,15 @@ ggplot(tidy_data,
   theme_minimal()+
   theme(plot.title = element_text(size =10))
 
-
-
 ```
+
+#Maritza comment: Changed model to method in geom_smooth code
 
 ![](images/mediation_analysis_diagram-01.png)
 
-Based on the result, H1 was supported. For better understand the relationship, we draw a path analysis figure. From this figure we can see that overall, longer screen-time usage significantly harms mental health (coeff = −0.70). This also supports our hypothesis that sleep duration partially mediates this relationship: excessive screen time reduces sleep, which in turn contributes to poorer mental health. However, this is not the whole story. Even after accounting for sleep and ensuring adequate sleep duration, screen overuse still shows a significant direct negative effect on mental health (direct coeff= −0.57), suggesting that excessive screen use may harm mental health through additional mechanisms beyond sleep.
+Based on the result, H1 was supported. To better understand the relationship, we draw a path analysis figure. From this figure we can see that overall, longer screen-time usage significantly harms mental health (coeff = −0.70). This also supports our hypothesis that sleep duration partially mediates this relationship: excessive screen time reduces sleep, which in turn contributes to poorer mental health. However, this is not the whole story. Even after accounting for sleep and ensuring adequate sleep duration, screen overuse still shows a significant direct negative effect on mental health (direct coeff= −0.57), suggesting that excessive screen use may harm mental health through additional mechanisms beyond sleep.
+
+#Maritza suggestion (revised summary of above): Based on the results, H1 was supported. To further examine the relationship, we conducted a path analysis. The analysis shows that longer screen-time usage significantly harms mental health (coeff = −0.70). This finding supports our hypothesis that sleep duration partially mediates the relationship: excessive screen time reduces sleep, which in turn contributes to poorer mental health. However, the mediation is only partial. Even after accounting for sleep duration, screen overuse still exerts a significant direct negative effect on mental health (direct coeff = −0.57), indicating that excessive screen use may impair mental health through additional mechanisms beyond sleep.
 
 *RQ*~2~:Is there a critical 'tipping point' in screen usage where sleep duration and mental health exhibit a sharp decline?
 
@@ -129,9 +141,10 @@ summary_data <- group_data |>
     mean_MH = mean(Mental_Health_Score),
     sd_MH   = sd(Mental_Health_Score),
     n       = n(),
-    se_MH   = sd_MH / sqrt(n) 
-  ) |>
-  ungroup()
+    se_MH   = sd_MH / sqrt(n),
+    .groups = "drop"
+  )
+#Maritza suggestion: .groups = "drop" instead of ungroup()
 
 ggplot(summary_data,
        aes(x = Usage_Group,
@@ -269,6 +282,8 @@ mh_wide |>
 
 An initial glance at this data suggested that the majority of those who primarily use Instagram, KakaoTalk, Snapchat, TikTok, WeChat, and WhatsApp have lower-than-average reported mental health. Using a chi-square test of independence, we sought to measure if these differences reflect a statistically significant relationship instead of chance.
 
+#Maritza suggestion (revision of section above): An initial review of the data indicated that individuals who primarily use Instagram, KakaoTalk, Snapchat, TikTok, WeChat, or WhatsApp tend to report below-average mental health. To determine whether these differences represent a statistically significant relationship rather than random variation, we conducted a chi-square test of independence.
+
 ```{r}
 mh_chi <- mh_wide |> 
   select(Low, `Not Low`) |> 
@@ -339,7 +354,7 @@ students <- sm |>
       TRUE ~ NA_character_
     )
   ) |>
-  filter(!is.na(region)) |> # Select the columns to use.
+  drop_na(region) |> # Select the columns to use.
   select(student_id,
          region,
          academic_level,
